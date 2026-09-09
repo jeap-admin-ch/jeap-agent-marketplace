@@ -1,0 +1,9 @@
+interface:
+  display_name: "jEAP Expert"
+  short_description: "Answer questions about jEAP — its libraries, starters, services, tooling and conventions — from the indexed jEAP documentation and source"
+  default_prompt: "Use $jeap-expert to answer this question about jEAP."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "jeap-mcp-service"

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "jeap-mcp-service": {
+      "type": "remote",
+      "url": "https://applicationplatform.ingress.nivel.bazg.admin.ch/applicationplatform-jeap-mcp-service/mcp",
+      "enabled": true
+    }
+  }
+}

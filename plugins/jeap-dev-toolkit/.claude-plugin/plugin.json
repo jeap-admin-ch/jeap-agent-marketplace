@@ -1,0 +1,11 @@
+{
+  "name": "jeap-dev-toolkit",
+  "description": "jEAP (Java Enterprise Application Platform) developer toolkit for coding agents. Bundles the jEAP MCP server and skills to answer jEAP questions from the indexed jEAP documentation and source, install the jEAP CLI, and migrate a jEAP based Spring Boot 3 project to Spring Boot 4.",
+  "version": "0.9.0",
+  "author": {
+    "name": "jEAP team",
+    "email": "jeap-community@bit.admin.ch"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["jeap", "spring-boot", "spring-boot-4", "migration", "java", "mcp", "mcp-server"]
+}

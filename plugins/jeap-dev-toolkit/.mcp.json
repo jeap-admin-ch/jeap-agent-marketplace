@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jeap-mcp-service": {
+      "type": "http",
+      "url": "https://applicationplatform.ingress.nivel.bazg.admin.ch/applicationplatform-jeap-mcp-service/mcp"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+publiccodeYmlVersion: 0.5.0
+name: jeap-agent-marketplace
+applicationSuite: jEAP
+softwareVersion: 0.9.0
+releaseDate: 2026-08-05
+url: "https://github.com/jeap-admin-ch/jeap-agent-marketplace.git"
+landingURL: "https://github.com/jeap-admin-ch/jeap"
+platforms:
+  - web
+categories:
+  - application-development
+developmentStatus: stable
+softwareType: library
+organisation:
+  uri: https://ld.admin.ch/office/V.1.7
+  name: Federal Office of Information Technology, Systems and Telecommunication
+description:
+  en:
+    localisedName: jeap-agent-marketplace
+    shortDescription: A plugin marketplace that helps developers build and maintain jEAP applications from their AI coding agent
+    longDescription: >
+      jeap-agent-marketplace is a plugin marketplace maintained by the jEAP team that helps developers build and
+      maintain applications on the jEAP platform (Java Enterprise Application Platform) directly from their AI
+      coding agent. Despite the historical repository name, the marketplace is multi-agent: the same plugins,
+      MCP server, and skills work across GitHub Copilot CLI, Claude Code, OpenAI Codex CLI, and OpenCode. You
+      register the marketplace once in your agent, install a plugin, and the agent gains jEAP-aware tools and
+      task automations.
+    features:
+      - A version-aware view of the jEAP platform via a bundled jEAP MCP server
+      - Skills and task automations for jEAP application development
+      - Works across GitHub Copilot CLI, Claude Code, OpenAI Codex CLI, and OpenCode
+legal:
+  license: Apache-2.0
+maintenance:
+  type: internal
+  contacts:
+    - name: Federal Office of Information Technology, Systems and Telecommunication FOITT
+      email: jeap-community@bit.admin.ch
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - en

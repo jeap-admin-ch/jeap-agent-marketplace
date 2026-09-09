@@ -1,0 +1,77 @@
+[
+ {"id":"s1-explicit-jeap","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"How do I publish an event to Kafka from this service? We use jEAP messaging."},
+ {"id":"s2-concept-no-keyword","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"whats the right way here to make sure outgoing kafka messages only go out when the db transaction actually commits? some outbox thing maybe?"},
+ {"id":"s3-project-context","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"how do I secure the REST endpoints of this service with oauth2? which properties do i need to set"},
+ {"id":"s4-versions","dir":"neutral","expect":true,"copilot":true,
+  "q":"which spring boot version does the current jeap parent ship with?"},
+ {"id":"s5-bootstrap","dir":"neutral","expect":true,"copilot":true,
+  "q":"we're starting a new microservice for customs declarations on our platform (we build on jeap) - how should i set the project up?"},
+ {"id":"s6-casual-typo","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"whats the jeap way to handle poison messages / failed kafka msgs? dead letter queue?"},
+ {"id":"s7-replace-handrolled","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"I'm about to write a small utility that logs every admin action to an audit table. anything speaking against just writing this myself?"},
+ {"id":"s8-debug-stacktrace","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"since yesterday one of our api consumers gets 401 on every call to this service. the logs say: An error occurred while attempting to decode the Jwt: Unsupported context claim value 'B2B'. (ch.admin.bit.jeap.security.resource.validation.ContextIssuerJwtValidator) - the token itself looks valid to me. what is this context claim and how do i fix it?",
+  "assertions":[
+   "Explains the context claim as jEAP's authentication context (the ctx JWT claim with contexts such as USER/SYS/B2B) validated by the jEAP security starter, not as a generic OAuth2 concept.",
+   "Identifies the cause: the token's B2B context is not among the authentication contexts allowed for the configured authorization server (the default is USER and SYS only).",
+   "Proposes a concrete fix under jeap.security.oauth2.resourceserver — adding B2B to authentication-contexts of the configured issuer and/or configuring the b2b-gateway entry (issuer plus jwk-set-uri) — not a fix via spring.security.* properties.",
+   "Cites at least one jEAP corpus source by name (a documentation path such as jeap-spring-boot-security-starter.md or a platform class such as ContextIssuerJwtValidator read from source), rather than answering purely from general knowledge.",
+   "Names a clear verdict: this is a configuration gap on the project side (the service does not accept the token's context), not a jEAP defect."
+  ]},
+ {"id":"s9-debug-generic-log","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"since yesterday one of our api consumers gets 401 on every call to this service. the logs say: An error occurred while attempting to decode the Jwt: The iss claim is not valid (org.springframework.security.oauth2.jwt.JwtValidationException) - the token itself looks valid to me. what's wrong?",
+  "assertions":[
+   "Treats the project as jEAP-based and locates issuer validation in the jEAP security starter: the token's iss claim must match an issuer configured under jeap.security.oauth2.resourceserver (authorization-server.issuer or auth-servers).",
+   "Gives the fix in jEAP terms — align the configured jeap.security.oauth2.resourceserver issuer with the token's actual iss, or add the token's issuer as an additional authorization server — and does not present setting spring.security.oauth2.resourceserver.* properties as the fix.",
+   "Relates the diagnosis to the project's actual configuration (the issuer https://keycloak.example.ch/auth/realms/example in application.yml).",
+   "Cites at least one jEAP corpus source by name (a documentation path or a platform class)."
+  ]},
+ {"id":"s10-debug-property-ignored","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"we're trying to debug 403s on this service, so i set jeap.security.oauth2.resourceserver.log.access-denied.debug=true but the logs still show nothing at all about the denied requests. the property seems to have no effect - what am i missing?",
+  "assertions":[
+   "Identifies the core reason the property has no effect: without jeap.security.oauth2.resourceserver.log.access-denied.enabled=true the access-denied logging is not active at all (the handler bean is not even created), so the fix includes setting enabled=true alongside debug.",
+   "Grounds the explanation in the jEAP corpus — cites the security starter's documentation, its property reference, or its source code — not in invented property semantics.",
+   "Does not invent nonexistent jeap.* properties or mechanisms; statements about log levels or handler behaviour, if made, are consistent with the starter's actual implementation (the denied-request line is logged at INFO without debug and at DEBUG with debug=true, so raising the logger may legitimately be part of the fix)."
+  ]},
+ {"id":"s11-debug-messages-stuck","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"since this morning our declaration events don't reach kafka anymore. the rows keep piling up in the deferred_message table but nothing arrives on the topic, and there are no errors in the logs. where should i start looking?",
+  "assertions":[
+   "Identifies the jEAP transactional outbox (jeap-messaging-outbox) as the component that relays deferred_message rows to Kafka.",
+   "Gives grounded next steps consistent with the outbox documentation — for example the background relay / scheduled resend coordinated via the shedlock table, immediate-after-commit vs scheduled sending, or the configuration under jeap.messaging.transactional-outbox.* — rather than only generic Kafka producer advice.",
+   "Cites at least one jEAP corpus source by name (for example a jeap-messaging-outbox documentation path).",
+   "Concrete outbox internals it names beyond the user-visible basics (deferred_message, shedlock, jeap.messaging.transactional-outbox.*) — class names, lock names, additional properties — are attributed to a corpus source (a named doc or source file) rather than stated without provenance."
+  ]},
+ {"id":"s12-docs-link","dir":"jeap-fixture","expect":true,"copilot":true,
+  "q":"can you point me to the jeap docs page about configuring the transactional outbox? i want to read through all the options myself",
+  "assertions":[
+   "Gives the read-on pointer as a public documentation URL — https://jeap-admin-ch.github.io/docs/building-blocks/libraries/jeap-messaging-outbox/configuration — including the libraries/ category segment exactly as on the public site, and does not present an internal corpus path (like jeap-messaging-outbox/docs/configuration.md) as the thing to open.",
+   "Does not present an internal corpus path as the link to open: if a corpus path appears, it accompanies the public URL as a citation rather than replacing it.",
+   "Any accompanying summary of the configuration options is consistent with the documented jeap.messaging.transactional-outbox.* properties rather than invented."
+  ]},
+ {"id":"n1-oauth-plain","dir":"plain-fixture","expect":false,"copilot":true,
+  "q":"how do I secure the REST endpoints of this service with oauth2? which properties do i need to set"},
+ {"id":"n2-kafka-plain","dir":"plain-fixture","expect":false,"copilot":true,
+  "q":"add a kafka consumer for the orders topic - use the usual spring kafka setup"},
+ {"id":"n3-sb4-generic","dir":"neutral","expect":false,"copilot":true,
+  "q":"what are the biggest changes in spring boot 4 compared to 3?"},
+ {"id":"n4-hashmap","dir":"neutral","expect":false,"copilot":true,
+  "q":"explain how java's HashMap handles hash collisions"},
+ {"id":"n5-jpa-plain","dir":"plain-fixture","expect":false,"copilot":true,
+  "q":"we use jpa with hibernate - how do i map a composite primary key?"},
+ {"id":"n6-debug-plain","dir":"plain-fixture","expect":false,"copilot":true,
+  "q":"since yesterday one of our api consumers gets 401 on every call to this service. the logs say: An error occurred while attempting to decode the Jwt: The iss claim is not valid (org.springframework.security.oauth2.jwt.JwtValidationException) - the token itself looks valid to me. what's wrong?",
+  "assertions":[
+   "Correctly diagnoses the generic Spring Security cause: the token's iss claim does not match the issuer the resource server is configured to expect (issuer-uri / decoder configuration), typically because the issuer changed or the token comes from a different realm.",
+   "Does not claim the project uses jEAP and does not propose jeap.* configuration as the fix; if jEAP is mentioned at all, only to note that this project is not jEAP-based."
+  ]},
+ {"id":"n7-property-ignored-plain","dir":"plain-fixture","expect":false,"copilot":true,
+  "q":"i set spring.kafka.consumer.group-id: orders-service in application.yml but the logs show the listener joining with some generated group id - the property has no effect?? what am i missing",
+  "assertions":[
+   "Gives a plausible plain Spring Kafka explanation (for example a groupId set on the @KafkaListener overriding the property, the property placed in a profile/document that is not active, or the file not being picked up) without proposing jeap.* configuration.",
+   "Does not claim the project uses jEAP."
+  ]}
+]
