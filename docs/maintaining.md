@@ -2,7 +2,7 @@
 
 Internal documentation for the **jEAP team** — how the marketplace is structured, how each agent
 is wired up, and how to add or release a plugin. End-user documentation lives in the
-[root README](../README.md) and each plugin's own README.
+[root README](https://github.com/jeap-admin-ch/jeap-agent-marketplace#readme) and each plugin's own README.
 
 ## Repository layout
 
@@ -57,7 +57,8 @@ is configured manually.
 2. Register it in **both** marketplace manifests, pointing each `source` at the plugin directory:
    - [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json) (Copilot / Claude)
    - [`.agents/plugins/marketplace.json`](../.agents/plugins/marketplace.json) (Codex)
-3. Add a row to the **Available plugins** table in the [root README](../README.md#2-available-plugins),
+3. Add a row to the **Available plugins** table in the
+   [root README](https://github.com/jeap-admin-ch/jeap-agent-marketplace#2-available-plugins),
    and a per-plugin summary section.
 
 ### Skill authoring constraints (portability)
