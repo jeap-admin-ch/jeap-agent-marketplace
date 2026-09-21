@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jeap-mcp-service": {
+      "type": "http",
+      "url": "https://jeap-mcp.bit.admin.ch/jeap-rhos-mcp-service/mcp"
+    }
+  }
+}

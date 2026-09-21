@@ -1,0 +1,38 @@
+{
+  "name": "jeap-dev-toolkit",
+  "version": "0.9.0",
+  "description": "jEAP (Java Enterprise Application Platform) developer toolkit for coding agents. Bundles the jEAP MCP server and skills to answer jEAP questions from the indexed jEAP documentation and source, install the jEAP CLI, and migrate a jEAP based Spring Boot 3 project to Spring Boot 4.",
+  "author": {
+    "name": "jEAP team",
+    "email": "jeap-community@bit.admin.ch"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "jeap",
+    "spring-boot",
+    "spring-boot-4",
+    "migration",
+    "java",
+    "mcp",
+    "mcp-server"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.codex-mcp.json",
+  "interface": {
+    "displayName": "jEAP Dev Toolkit",
+    "shortDescription": "jEAP expertise, MCP server and migration skills",
+    "longDescription": "Use the jEAP Dev Toolkit to connect Codex to the jEAP MCP server, answer jEAP questions from the jEAP documentation and source, install or update the jEAP CLI, and migrate jEAP Spring Boot 3 Maven projects to Spring Boot 4.",
+    "developerName": "jEAP team",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Answer this from a jEAP point of view: what does jEAP already provide for it?",
+      "Use the jEAP Dev Toolkit to migrate this jEAP Spring Boot 3 project to Spring Boot 4.",
+      "Use the jEAP Dev Toolkit to install or update the jEAP CLI."
+    ]
+  }
+}

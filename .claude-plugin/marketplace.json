@@ -1,0 +1,19 @@
+{
+  "name": "jeap",
+  "owner": {
+    "name": "jEAP team",
+    "email": "jeap-community@bit.admin.ch"
+  },
+  "metadata": {
+    "description": "Agent plugin marketplace by the jEAP team, providing plugins that support developers in building jEAP (Java Enterprise Application Platform) based applications.",
+    "version": "0.9.0"
+  },
+  "plugins": [
+    {
+      "name": "jeap-dev-toolkit",
+      "description": "jEAP developer toolkit: bundles the jEAP MCP server and skills for developing and maintaining jEAP based applications.",
+      "version": "0.9.0",
+      "source": "./plugins/jeap-dev-toolkit"
+    }
+  ]
+}

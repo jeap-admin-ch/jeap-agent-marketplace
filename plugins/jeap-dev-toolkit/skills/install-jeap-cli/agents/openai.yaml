@@ -1,0 +1,5 @@
+interface:
+  display_name: "Install jEAP CLI"
+  short_description: "Install or update the jEAP CLI"
+  default_prompt: "Use $install-jeap-cli to install or update the jEAP CLI."
+

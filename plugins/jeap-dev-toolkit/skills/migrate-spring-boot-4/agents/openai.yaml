@@ -1,0 +1,9 @@
+interface:
+  display_name: "Migrate Spring Boot 4"
+  short_description: "Migrate jEAP projects to Spring Boot 4"
+  default_prompt: "Use $migrate-spring-boot-4 to migrate this jEAP project to Spring Boot 4."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "jeap-mcp-service"

@@ -1,0 +1,20 @@
+{
+  "name": "jeap",
+  "interface": {
+    "displayName": "jEAP"
+  },
+  "plugins": [
+    {
+      "name": "jeap-dev-toolkit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/jeap-dev-toolkit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}

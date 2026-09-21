@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: declaration-service
+jeap:
+  security:
+    oauth2:
+      resourceserver:
+        authorization-server:
+          issuer: "https://keycloak.example.ch/auth/realms/example"
+        log:
+          access-denied:
+            debug: true
+  messaging:
+    kafka:
+      cluster:
+        default-cluster:
+          bootstrapServers: kafka.example.ch:9092
+          schemaRegistryUrl: https://schema-registry.example.ch
+      systemName: JME
+      serviceName: ${spring.application.name}
+      errorTopicName: jme-messageprocessing-failed
