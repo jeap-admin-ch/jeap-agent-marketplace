@@ -3,7 +3,7 @@
   "mcp": {
     "jeap-mcp-service": {
       "type": "remote",
-      "url": "https://jeap-mcp.bit.admin.ch/jeap-rhos-mcp-service/mcp",
+      "url": "https://jeap-mcp.bit.admin.ch/jeap-mcp-service/mcp",
       "enabled": true
     }
   }
