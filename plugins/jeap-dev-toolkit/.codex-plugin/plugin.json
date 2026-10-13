@@ -1,7 +1,7 @@
 {
   "name": "jeap-dev-toolkit",
-  "version": "0.9.0",
-  "description": "jEAP (Java Enterprise Application Platform) developer toolkit for coding agents. Bundles the jEAP MCP server and skills to answer jEAP questions from the indexed jEAP documentation and source, install the jEAP CLI, and migrate a jEAP based Spring Boot 3 project to Spring Boot 4.",
+  "version": "0.10.0",
+  "description": "jEAP (Java Enterprise Application Platform) developer toolkit for coding agents. Bundles the jEAP MCP server and skills to answer jEAP questions from indexed documentation and source, install the jEAP CLI, upgrade jEAP projects to Spring Boot 4, and migrate selected Confluence architecture documentation to Markdown.",
   "author": {
     "name": "jEAP team",
     "email": "jeap-community@bit.admin.ch"
@@ -14,14 +14,17 @@
     "migration",
     "java",
     "mcp",
-    "mcp-server"
+    "mcp-server",
+    "confluence",
+    "markdown",
+    "architecture"
   ],
   "skills": "./skills/",
   "mcpServers": "./.codex-mcp.json",
   "interface": {
     "displayName": "jEAP Dev Toolkit",
     "shortDescription": "jEAP expertise, MCP server and migration skills",
-    "longDescription": "Use the jEAP Dev Toolkit to connect Codex to the jEAP MCP server, answer jEAP questions from the jEAP documentation and source, install or update the jEAP CLI, and migrate jEAP Spring Boot 3 Maven projects to Spring Boot 4.",
+    "longDescription": "Use the jEAP Dev Toolkit to connect Codex to the jEAP MCP server, answer questions from jEAP documentation and source, install or update the jEAP CLI, upgrade jEAP projects to Spring Boot 4, and migrate selected Confluence pages to repository Markdown with editable diagrams and a glossary.",
     "developerName": "jEAP team",
     "category": "Coding",
     "capabilities": [
@@ -32,7 +35,8 @@
     "defaultPrompt": [
       "Answer this from a jEAP point of view: what does jEAP already provide for it?",
       "Use the jEAP Dev Toolkit to migrate this jEAP Spring Boot 3 project to Spring Boot 4.",
-      "Use the jEAP Dev Toolkit to install or update the jEAP CLI."
+      "Use the jEAP Dev Toolkit to install or update the jEAP CLI.",
+      "Use the jEAP Dev Toolkit to migrate these Confluence architecture pages into the specified repository folder."
     ]
   }
 }

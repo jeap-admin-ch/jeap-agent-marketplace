@@ -100,6 +100,45 @@ reusable trigger-eval set (realistic should/shouldn't-trigger queries against jE
 fixtures) with runners for Claude Code and a Copilot with/without-skill A/B, plus reference results.
 Re-run it after changing the skill's description or body.
 
+**Testing Confluence migration helpers.** Run
+`python3 -m unittest discover -s plugins/jeap-dev-toolkit/skills/migrate-confluence-docs/tests -v`.
+The tests use local fixtures and a mocked renderer: they require neither Confluence credentials
+nor Draw.io. Regression coverage includes bounded subtree discovery, failed-page links, Markdown without
+raw HTML, admonitions, expected diagram inventories, source/SVG hash checks and embedded resource rejection.
+They also cover PlantUML code-source retention, glossary row headers, diagram link inspection (including
+compressed Draw.io tabs), list numbering, table pipes and the native renderer's restricted mount arguments.
+Container regressions cover endpoint selection, rootless UID mapping and cleanup after timeouts, including
+stopping on cleanup failure. Glossary regressions preserve literal markup and avoid duplicates on reimport.
+Review-tool regressions cover complete deduplicated link rows, Jira identities without lookups, structural
+coverage, retained review answers, cleanup blocking and read-only SVG/pair validation from arbitrary paths.
+A release smoke test against explicitly authorised pages and a real offline Draw.io
+installation should additionally check rendered diagram fidelity; the fixture tests do not prove it.
+For a real container smoke test, set `CONFLUENCE_DRAWIO_TEST_IMAGE` to an already installed team-approved
+image and run the same test command. `test_drawio_smoke.py` exercises the production renderer with two
+local fixture tabs, checks their SVG text and source preservation, and verifies reuse. It is explicitly
+skipped without that variable and never pulls an image. Run it on both ordinary Docker as a non-root user
+and rootless Docker before claiming compatibility with both modes. This test needs no Confluence access.
+The same installation can be checked before a migration with
+`render_drawio.py --smoke-test --container-image <local-image>`. The optional image build recipe is in the skill's
+`references/renderer-setup.md`; it is not an approved or prebuilt renderer distribution.
+
+**Diagnosing a missing migration skill.** Version 0.10.0 includes
+`skills/migrate-confluence-docs/SKILL.md`. Codex explicitly declares `./skills/`; Copilot/Claude use the
+standard plugin `skills/` directory. There is no per-skill registration list to extend. For Copilot, check
+`copilot plugin list --json` for the actual version and installation source, then update the installed
+plugin or load the intended local plugin directory in a fresh session. A tool such as `functions.skill`
+uses the host's active catalog, not every `SKILL.md` present in adjacent checkouts. See the
+[Copilot plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
+
+To verify this checkout directly without installing it, run:
+
+```bash
+copilot --plugin-dir /path/to/jeap-agent-marketplace/plugins/jeap-dev-toolkit skill list --json
+```
+
+The result must contain `migrate-confluence-docs` with `source: plugin`, the intended checkout path and
+`enabled: true`. Use the same `--plugin-dir` when starting a local test session.
+
 ## Updating / releasing a plugin
 
 1. Bump `version` in **both** plugin manifests (`.claude-plugin/plugin.json` and

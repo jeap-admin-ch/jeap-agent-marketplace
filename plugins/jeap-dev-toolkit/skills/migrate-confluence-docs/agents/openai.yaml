@@ -1,0 +1,4 @@
+interface:
+  display_name: "Migrate Confluence Documentation"
+  short_description: "Move architecture docs from Confluence into Git"
+  default_prompt: "Use $migrate-confluence-docs to turn these Confluence pages into documentation following the target repository's conventions, preserving diagram sources and the glossary, with one migration report."

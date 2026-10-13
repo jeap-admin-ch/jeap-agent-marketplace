@@ -35,6 +35,7 @@ to actually *use* that view, and ships **skills** that carry the chores end to e
 | [`jeap-expert`](#skill-jeap-expert) | skill | Answers jEAP questions from the indexed jEAP documentation and source instead of model memory, and from a jEAP point of view. |
 | [`install-jeap-cli`](#skill-install-jeap-cli) | skill | Installs or updates the jEAP CLI (the `jeap` command). |
 | [`migrate-spring-boot-4`](#skill-migrate-spring-boot-4) | skill | Upgrades a jEAP Spring Boot 3 Maven project to Spring Boot 4 and drives it back to green. |
+| [`migrate-confluence-docs`](#skill-migrate-confluence-docs) | skill | Migrates selected Confluence architecture pages to Markdown, preserving diagram sources and maintaining the glossary. No jEAP tooling dependency. |
 
 ### MCP server: `jeap-mcp-service`
 
@@ -148,6 +149,53 @@ official Spring/Hibernate migration guides (links curated in the skill) for fram
 general documentation-retrieval MCP such as [Context7](https://context7.com) is configured in your
 agent, the skill will use it too — but it is optional, not required.
 
+### Skill: `migrate-confluence-docs`
+
+Use this to move system architecture documentation from Confluence Data Center into a chosen
+repository folder. It works independently of the jEAP expert skill, CLI and MCP server and has
+no team-specific spaces, terminology or publishing rules.
+
+For example: *“Migrate Confluence pages 12345 and 12346 from https://wiki.example.org/confluence
+into docs/architecture. Page 12346 is our chapter 12 glossary.”* In Claude Code, invoke
+`/jeap-dev-toolkit:migrate-confluence-docs`; in other agents, describe the task or select the skill.
+It is included from plugin version 0.10.0. If it is absent from the active skill catalog, check the installed
+version/location and refresh the session, or load the checked-out plugin explicitly.
+
+The skill produces finished documentation following the target repository's structure, language,
+frontmatter and publishing conventions. It retains Draw.io sources as `.drawio` with matching `.svg`
+images and PlantUML sources as `.puml`, and maintains the existing arc42 chapter 12 glossary. A single
+`migration-report.md` outside the published documentation contains the summary, source/target mapping,
+validation results and links needing review. Raw XML, JSON manifests, preview images and conversion
+diagnostics remain in a temporary working directory.
+Local helpers seed a structural coverage checklist, preserve Jira keys/queries without fetching them,
+assemble every source/target link into a deduplicated table, and block the documented cleanup workflow
+while review or diagram checks remain unresolved. These checks do not replace editorial or publisher validation.
+For renderer prerequisites, an installation smoke test and a local image build recipe, see
+[renderer setup](skills/migrate-confluence-docs/references/renderer-setup.md).
+
+Only explicitly selected pages and their attachments are read. Descendants are included only when
+the user explicitly requests that page tree; included pages and ordinary links do not expand scope.
+The helper automates that discovery with `--include-descendants`, bounded by `--max-pages` (100) and
+`--max-depth` (20), and records the hierarchy and any incomplete branches in its working manifest.
+Unsupported content and missing diagram renderers are reported for follow-up. Information and
+requirements are retained, even when pages are reorganised or merged into the target's chapters.
+
+For repositories published by the Doc Service, the skill reads the documentation set's configuration,
+fits pages into its chapters, respects supported metadata and generated-page names, and checks which
+diagram files may enter the upload bundle. This is conditional guidance, not a dependency on another
+jEAP skill or a fixed repository. See
+[target repository conventions](skills/migrate-confluence-docs/references/target-repository.md).
+An existing or explicitly supplied arc42 structure determines the destinations; one migration can span
+several chapters. If requested, the agent additionally retrieves Doc-Service rules via MCP and compares
+them with the target's version and configuration. Without MCP, local reconciliation remains possible and
+the unavailable rule check is reported. Only general platform questions are sent to MCP.
+
+Anonymous access is tried first. If required, provide your Confluence PAT locally through
+`CONFLUENCE_PAT_FILE` (a raw-token file outside the repository) or `CONFLUENCE_TOKEN`.
+Never paste the token into the agent conversation. See the
+[skill](skills/migrate-confluence-docs/SKILL.md) and
+[operational notes](skills/migrate-confluence-docs/references/operations.md) for details.
+
 ## Requirements
 
 | Requirement                                           | Needed for |
@@ -157,6 +205,8 @@ agent, the skill will use it too — but it is optional, not required.
 | `sudo` (your password)                                | **global** jEAP CLI install only |
 | **JDK 25**                                            | the Spring Boot 4 build — jEAP's SB4 baseline is Java 25; the migrated code will not compile on an older JDK |
 | Linux or macOS                                        | the jEAP CLI |
+| Python 3.10+ (standard library only), network access to the selected Confluence instance | Confluence export; developer PAT only if required |
+| Draw.io Desktop with bubblewrap and Xvfb on Linux, or Docker with an existing local image containing `xvfb-run` and `drawio` | Offline Draw.io SVG generation |
 
 ## Contents
 
@@ -170,7 +220,12 @@ jeap-dev-toolkit/
 └── skills/
     ├── jeap-expert/SKILL.md            # Answer jEAP questions from the indexed jEAP docs and source
     ├── install-jeap-cli/SKILL.md       # Install / update the jEAP CLI
-    └── migrate-spring-boot-4/SKILL.md  # Spring Boot 3 → 4 migration
+    ├── migrate-spring-boot-4/SKILL.md  # Spring Boot 3 → 4 migration
+    └── migrate-confluence-docs/      # Confluence → Markdown, sources, SVGs and glossary
+        ├── SKILL.md
+        ├── scripts/                 # Export, offline rendering, validation and review helpers
+        ├── references/              # Target publishing conventions and operations
+        └── tests/                   # Offline behavioural tests
 ```
 
 For how these manifests are wired per agent, and how to extend the marketplace, see

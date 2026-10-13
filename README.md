@@ -18,7 +18,8 @@ agent gains jEAP-aware tools and task automations.
   jEAP claim to be looked up and cited, and it frames your question the way the platform does —
   what jEAP already provides for it, and what it expects.
 - **Task automations as skills.** Bundled skills drive concrete jobs end to end — installing the
-  jEAP CLI and migrating a jEAP Spring Boot 3 project to Spring Boot 4 — instead of leaving you
+  jEAP CLI, migrating a jEAP Spring Boot 3 project to Spring Boot 4, and moving Confluence
+  architecture documentation into repository Markdown — instead of leaving you
   to orchestrate each step by hand.
 - **One versioned, easy-to-update package** that behaves the same in every supported agent.
 
@@ -204,6 +205,7 @@ hand — without you assembling MCP endpoints and prompts yourself.
 | `jeap-expert` | skill | Answers jEAP questions as a jEAP specialist: every claim looked up in the indexed jEAP documentation and source, and cited, framed by what the platform already provides. Fires on jEAP questions in your normal conversation. |
 | `install-jeap-cli` | skill | Installs or updates the jEAP CLI (the `jeap` command), used for jEAP automation such as the Spring Boot migration.                                                                                                                             |
 | `migrate-spring-boot-4` | skill | Upgrades a jEAP Spring Boot 3 Maven project to Spring Boot 4 via `jeap migrate spring-boot-4`, then drives the project back to a green build and passing tests.                                                                                |
+| `migrate-confluence-docs` | skill | Fits selected Confluence pages into the target repository's Markdown conventions, preserving Draw.io sources/SVGs, PlantUML sources and the chapter 12 glossary. Produces one migration report with links to review; independent of jEAP tooling and usable by any team. |
 
 **See the [plugin README](plugins/jeap-dev-toolkit/README.md)** for the full detail: when and how
 to use each skill, what to expect during a (long-running) Spring Boot 4 migration, and the exact
@@ -219,6 +221,7 @@ is namespaced: `/jeap-dev-toolkit:migrate-spring-boot-4`.)
 | ------- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `jeap-mcp-service` is not connected / `jeap_*` tools unavailable | The MCP server may be temporarily unreachable. Reconnect it with the in-session `/mcp` command (Copilot, Claude Code, Codex, or OpenCode). For Copilot the plugin MCP server is shown under `/mcp` inside a session, **not** by the `copilot mcp list` shell command. The skills still work without it, minus the jEAP tools. |
 | A skill never triggers | Confirm the plugin is installed (step 4). Invoke it explicitly (e.g. `/jeap-dev-toolkit:migrate-spring-boot-4` in Claude Code) or describe the task more concretely.                                                                                                                                                                                         |
+| `migrate-confluence-docs` is missing | The migration skill is bundled from plugin 0.10.0. Check the installed version and source, update the plugin and start a fresh session; an existing checkout alone is not proof that the active plugin uses it. Select `migrate-confluence-docs` explicitly, or read its checked-out `SKILL.md`. |
 | jEAP answers look generic, or cite no source | The agent answered from memory instead of the indexed jEAP documentation and source. Ask again naming jEAP explicitly, or invoke the `jeap-expert` skill explicitly (in Claude Code: `/jeap-dev-toolkit:jeap-expert`) — and check with `/mcp` that `jeap-mcp-service` is connected. |
 | `jeap: command not found` during a migration | The jEAP CLI isn't installed — run the `install-jeap-cli` skill (or ask the agent to install it).                                                                                                                                                                                                                                                            |
 | jEAP CLI / migration fails to start | The jEAP CLI runs in Docker — ensure Docker is running. The Spring Boot 4 build also needs **JDK 25**. See the [plugin requirements](plugins/jeap-dev-toolkit/README.md#requirements).                                                                                                                                                                       |
