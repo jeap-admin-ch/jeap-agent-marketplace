@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-10-29
+
+### Security
+
+- Updated the Maven parents of the `jeap-expert` eval fixtures, which Snyk reported with many known vulnerabilities:
+  `jeap-fixture` uses `jeap-spring-boot-parent` 41.29.0 (was 26.4.0) and `plain-fixture` uses Spring Boot 4.1.2 (was 3.4.5).
+  The fixtures are only test projects for the evals and are not part of any plugin.
+
+### Added
+
+- Renovate configuration (`renovate.json`, based on the shared jEAP `default-oss` preset) to keep the fixture
+  dependencies up to date.
+
 ## [0.10.0] - 2026-10-12
 
 ### Added
