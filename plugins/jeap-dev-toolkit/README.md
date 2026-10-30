@@ -1,8 +1,8 @@
 # jEAP Dev Toolkit Plugin
 
-An agent plugin — for **GitHub Copilot CLI**, **Claude Code**, and **OpenAI Codex CLI** (and
-usable with **OpenCode** via manual setup) — that bundles everything a jEAP (Java Enterprise
-Application Platform) developer needs into one versioned, easy-to-update package.
+An agent plugin — for **GitHub Copilot CLI**, **Claude Code**, **OpenAI Codex CLI**, and
+**OpenCode** — that bundles everything a jEAP (Java Enterprise Application Platform) developer
+needs into one versioned, easy-to-update package.
 
 > **Installing, updating, and removing** this plugin is the same for every plugin in the
 > marketplace and is documented once in the
@@ -212,9 +212,10 @@ Never paste the token into the agent conversation. See the
 
 ```
 jeap-dev-toolkit/
+├── package.json                      # OpenCode plugin package (name + exports)
 ├── .claude-plugin/plugin.json        # Copilot / Claude plugin manifest
 ├── .codex-plugin/plugin.json         # Codex plugin manifest
-├── .opencode-plugin/opencode.json    # OpenCode MCP snippet (merged manually)
+├── .opencode-plugin/index.ts         # OpenCode plugin: registers jeap-mcp-service + skills
 ├── .mcp.json                         # jEAP MCP server (Copilot / Claude)
 ├── .codex-mcp.json                   # jEAP MCP server (Codex)
 └── skills/

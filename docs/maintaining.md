@@ -11,6 +11,9 @@ jeap-agent-marketplace/
 ├── README.md                              # user docs (marketplace level)
 ├── docs/
 │   └── maintaining.md                     # this file
+├── .github/
+│   └── workflows/
+│       └── opencode-plugin-release.yml    # builds + publishes @jeap/jeap-dev-toolkit on merge to main
 ├── evals/
 │   └── jeap-expert/                       # trigger evals for the jeap-expert skill (see its README)
 ├── .claude-plugin/
@@ -21,11 +24,10 @@ jeap-agent-marketplace/
 └── plugins/
     └── jeap-dev-toolkit/                   # a plugin
         ├── README.md                       # user docs (plugin level)
+        ├── package.json                    # OpenCode plugin package (name + exports; files: .opencode-plugin, skills)
         ├── .claude-plugin/plugin.json       # Copilot / Claude plugin manifest
         ├── .codex-plugin/plugin.json        # Codex plugin manifest
-        ├── .opencode-plugin/
-        │   ├── opencode.json                # OpenCode MCP snippet (source of truth, merged into the user's config)
-        │   └── setup.py                      # installs the snippet + selected skills into a local OpenCode config
+        ├── .opencode-plugin/index.ts         # OpenCode plugin: registers jeap-mcp-service + skills at runtime
         ├── .mcp.json                        # jEAP MCP server (Copilot / Claude)
         ├── .codex-mcp.json                  # jEAP MCP server (Codex)
         └── skills/                          # bundled skills (each: SKILL.md + optional scripts/, references/)
@@ -41,23 +43,34 @@ manifest files they read.
 | GitHub Copilot CLI | `.claude-plugin/marketplace.json` | `.claude-plugin/plugin.json` | `.mcp.json` | `skills/` |
 | Claude Code | `.claude-plugin/marketplace.json` | `.claude-plugin/plugin.json` | `.mcp.json` | `skills/` |
 | OpenAI Codex CLI | `.agents/plugins/marketplace.json` | `.codex-plugin/plugin.json` | `.codex-mcp.json` (via `mcpServers` field in the plugin manifest) | `skills/` (via `skills` field) |
-| OpenCode | — (no marketplace) | — | `.opencode-plugin/opencode.json` (merged into the user's config, by `setup.py` or by hand) | `skills/` (copied by `setup.py` or by hand) |
+| OpenCode | — (no marketplace) | `package.json` (name + `exports`) | `.opencode-plugin/index.ts` via `ctx.mcp.transform` | `.opencode-plugin/index.ts` via `ctx.skill.transform`, reading `skills/*/SKILL.md` |
 
 Copilot and Claude Code share the `.claude-plugin/` manifests and `.mcp.json`. Codex uses its own
-manifests under `.agents/` and `.codex-plugin/`. OpenCode has no marketplace or plugin manifest;
-[`.opencode-plugin/setup.py`](../plugins/jeap-dev-toolkit/.opencode-plugin/setup.py) merges the MCP
-config and copies skills for the user (see [`docs/opencode-setup.md`](opencode-setup.md)) — note
-that OpenCode's own "[plugins](https://opencode.ai/docs/plugins/)" are an unrelated JS/TS hook
-mechanism, not an install mechanism, so this has to be a plain script rather than one of those.
+manifests under `.agents/` and `.codex-plugin/`. OpenCode has no marketplace, but it is a real
+[OpenCode plugin](https://opencode.ai/v2/docs/build/plugins/server/): `.opencode-plugin/index.ts`'s
+`setup(ctx)` calls `ctx.mcp.transform` to register `jeap-mcp-service` and `ctx.skill.transform` to
+register each skill from `skills/*/SKILL.md`, both reconciled on every OpenCode launch — no config
+merge or file copy needed. It is published to the public npm registry as
+[`@jeap/jeap-dev-toolkit`](https://www.npmjs.com/package/@jeap/jeap-dev-toolkit) via
+[`.github/workflows/opencode-plugin-release.yml`](../.github/workflows/opencode-plugin-release.yml)
+using npm Trusted Publishing (OIDC) — see [`docs/opencode-setup.md`](opencode-setup.md) for the
+install instructions. Requires OpenCode **v2.0.27+**
+(`ctx.mcp.transform`/`ctx.skill.transform`); OpenCode v1 is unsupported.
 
 ## Adding a new plugin
 
 1. Create `plugins/<plugin-name>/` with:
-   - `.claude-plugin/plugin.json` (Copilot / Claude), `.codex-plugin/plugin.json` (Codex), and
-     `.opencode-plugin/opencode.json` (OpenCode MCP snippet) manifests. Copy
-     `jeap-dev-toolkit/.opencode-plugin/setup.py` alongside the new plugin's `opencode.json` too —
-     it's generic (reads skill names from the plugin's own `skills/` folder and the MCP entry from
-     the sibling `opencode.json`), so a straight copy works without edits.
+   - `.claude-plugin/plugin.json` (Copilot / Claude) and `.codex-plugin/plugin.json` (Codex)
+     manifests.
+   - A `package.json` (`name: "@jeap/<plugin-name>"`, `exports: { ".": "./.opencode-plugin/index.ts" }`,
+     `files: [".opencode-plugin", "skills"]`, `publishConfig: { "access": "public" }`) and
+     `.opencode-plugin/index.ts` for OpenCode. Copy `jeap-dev-toolkit`'s version of both and
+     adjust the MCP server name/URL and the package name — the skill-loading part is generic
+     (reads every `skills/*/SKILL.md` in the plugin's own folder), so it needs no changes.
+     To publish it to npm too, extend `.github/workflows/opencode-plugin-release.yml` with this
+     plugin's own `PLUGIN_NAME`/`PLUGIN_ROOT` jobs (or copy the workflow under a new name) and
+     give it its own `<plugin-name>-v*`-style tag prefix. The one-time npm/GitHub setup this needs
+     is maintainer-internal, not documented in this repo.
    - `.mcp.json` and/or `.codex-mcp.json` if the plugin ships an MCP server.
    - `skills/<skill-name>/SKILL.md` for each skill.
    - A `README.md` describing the plugin (what it's for, what it installs, how/when to use each
@@ -149,12 +162,19 @@ The result must contain `migrate-confluence-docs` with `source: plugin`, the int
 
 ## Updating / releasing a plugin
 
-1. Bump `version` in **both** plugin manifests (`.claude-plugin/plugin.json` and
-   `.codex-plugin/plugin.json`).
+1. Bump `version` in **all three** of `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`,
+   and `plugins/jeap-dev-toolkit/package.json` (the OpenCode npm package) — keep all three in
+   lockstep, one version per plugin release.
 2. Keep the version in the Claude/Copilot marketplace entry
    (`.claude-plugin/marketplace.json`) in sync.
-3. Commit and push to the marketplace repository on GitHub
-   (`jeap-admin-ch/jeap-agent-marketplace`).
+3. Add a `CHANGELOG.md` entry.
+4. Commit and push to the marketplace repository on GitHub
+   (`jeap-admin-ch/jeap-agent-marketplace`); merging the version bump to `main` both makes the
+   new version available to Copilot/Claude/Codex consumers and, via
+   [`.github/workflows/opencode-plugin-release.yml`](../.github/workflows/opencode-plugin-release.yml),
+   **publishes** `@jeap/jeap-dev-toolkit` to npm. A merge that does not bump
+   `plugins/jeap-dev-toolkit/package.json`'s version is a no-op for npm (the release job sees the
+   tag already exists and skips).
 
 Consumers then update with:
 
@@ -163,7 +183,7 @@ Consumers then update with:
 | GitHub Copilot CLI | `copilot plugin update <plugin-name>` (or `copilot plugin update --all`) |
 | Claude Code | `/plugin marketplace update jeap`, then apply updates from the `/plugin` UI |
 | OpenAI Codex CLI | `codex plugin marketplace upgrade jeap` (re-run `codex plugin add <plugin-name>@jeap` if the version doesn't refresh) |
-| OpenCode | refresh the local clone, then re-run `.opencode-plugin/setup.py` (or re-copy `skills/` and re-merge the MCP snippet by hand) |
+| OpenCode | `opencode plugin update @jeap/jeap-dev-toolkit` |
 
 ## License
 

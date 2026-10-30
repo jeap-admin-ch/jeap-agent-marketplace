@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@jeap/jeap-dev-toolkit",
+  "version": "0.10.0",
+  "description": "jEAP developer toolkit as an OpenCode plugin: registers the jeap-mcp-service MCP server and the jeap-dev-toolkit skills (install-jeap-cli, jeap-expert, migrate-confluence-docs, migrate-spring-boot-4) directly in OpenCode's runtime catalog.",
+  "keywords": [
+    "jeap",
+    "opencode",
+    "opencode-plugin",
+    "mcp",
+    "mcp-server",
+    "skills",
+    "spring-boot",
+    "java"
+  ],
+  "author": "Federal Office of Information Technology, Systems and Telecommunication FOITT",
+  "license": "Apache-2.0",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/jeap-admin-ch/jeap-agent-marketplace/tree/main/plugins/jeap-dev-toolkit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeap-admin-ch/jeap-agent-marketplace.git",
+    "directory": "plugins/jeap-dev-toolkit"
+  },
+  "bugs": {
+    "url": "https://github.com/jeap-admin-ch/jeap-agent-marketplace/issues"
+  },
+  "exports": {
+    ".": "./.opencode-plugin/index.ts"
+  },
+  "files": [
+    ".opencode-plugin",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .opencode-plugin"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": "^2.0.27"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "^2.0.27",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "sideEffects": false
+}

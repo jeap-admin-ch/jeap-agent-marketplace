@@ -1,82 +1,85 @@
-# OpenCode (manual setup)
+# OpenCode
 
-OpenCode has no marketplace or plugin-install command — [OpenCode "plugins"](https://opencode.ai/docs/plugins/)
-are a different thing (JS/TS hook modules for events like `tool.execute.before`); they don't bundle
-MCP servers or skills. So the jEAP MCP server and skills are added by hand from a local copy of
-this repository, either with the script below or fully manually.
+OpenCode has no marketplace command, but it does have a real plugin-install mechanism — unlike
+[OpenCode "plugins"](https://opencode.ai/v2/docs/build/plugins/) in general (JS/TS modules with
+lifecycle hooks), `jeap-dev-toolkit`'s plugin is written specifically to use the
+[`ctx.mcp.transform`](https://opencode.ai/v2/docs/build/plugins/server/#mcp-servers) and
+[`ctx.skill.transform`](https://opencode.ai/v2/docs/build/plugins/server/#skills) hooks to register
+the jEAP MCP server and this plugin's skills directly in OpenCode's runtime catalog. No config file
+to merge by hand and no skill folders to copy — OpenCode reconciles both on every launch, and a
+`jeap-mcp-service` entry you set yourself is left alone.
+
+It is published to the public npm registry as
+[`@jeap/jeap-dev-toolkit`](https://www.npmjs.com/package/@jeap/jeap-dev-toolkit).
+
+Requires **OpenCode v2.0.27+** (first release with `ctx.mcp.transform` / `ctx.skill.transform`).
+OpenCode v1 is unsupported.
 
 ## Install OpenCode itself
 
-If OpenCode isn't installed yet, or was installed via `npm`/`bun`, use the official install
-script instead:
+If OpenCode isn't installed yet, or was installed via `npm`/`bun`, use the official install script
+instead:
 
 ```bash
 curl -fsSL https://opencode.ai/v2/install | bash
 ```
 
-## Get the jEAP marketplace repo
+## Install the plugin
 
-Clone or otherwise obtain this repo:
-
-```bash
-git clone https://github.com/jeap-admin-ch/jeap-agent-marketplace.git
-```
-
-## Option A: run the setup script
-
-[`plugins/jeap-dev-toolkit/.opencode-plugin/setup.py`](../plugins/jeap-dev-toolkit/.opencode-plugin/setup.py)
-does both steps below for you: it merges the `mcp.jeap-mcp-service` entry into your OpenCode
-config and copies the selected skill folders into the directory OpenCode scans for skills. It
-needs only Python 3.8+ (standard library only) and makes no network calls.
+**Global (recommended):**
 
 ```bash
-cd jeap-agent-marketplace
-python3 plugins/jeap-dev-toolkit/.opencode-plugin/setup.py --dry-run   # preview, writes nothing
-python3 plugins/jeap-dev-toolkit/.opencode-plugin/setup.py             # apply, global scope (default)
+opencode plugin add @jeap/jeap-dev-toolkit
 ```
 
-Useful flags:
+**Project-local** — add it to the project's `opencode.json(c)`:
 
-| Flag | Effect |
-| ---- | ------ |
-| `--dry-run` | Print what would change; writes nothing. Always safe to run first. |
-| `--scope global` (default) | Target `~/.config/opencode/opencode.json` and `~/.config/opencode/skills/`. |
-| `--scope project --project-dir <path>` | Target `<path>/opencode.json` and `<path>/.opencode/skills/` instead. |
-| `--skills <a,b,...>` | Install only the named skills (default: `all`). |
-| `--list-skills` | Print available skill names and exit; installs nothing. |
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["@jeap/jeap-dev-toolkit"]
+}
+```
 
-Re-running the script is always safe:
-
-- the MCP merge only ever adds/updates the single `mcp.jeap-mcp-service` key — every other key in
-  your `opencode.json`, including other MCP servers, is left untouched — and it writes a
-  `opencode.json.bak` backup before changing an existing file;
-- the skill copy only overwrites the folders it previously copied, so running it again (e.g. after
-  pulling a newer checkout) is how you **update**.
-
-## Option B: do it manually
-
-1. **MCP server** — merge the `mcp` block from
-   [`plugins/jeap-dev-toolkit/.opencode-plugin/opencode.json`](../plugins/jeap-dev-toolkit/.opencode-plugin/opencode.json)
-   into your OpenCode configuration — `~/.config/opencode/opencode.json` (global) or
-   `./opencode.json` (per project). OpenCode merges config files, but a single file can have only
-   one top-level `mcp` object, so add the `jeap-mcp-service` key into your existing `mcp` block
-   rather than pasting a second one.
-
-2. **Skills** — copy the skill folders from `plugins/jeap-dev-toolkit/skills/` into a directory
-   OpenCode scans, keeping one folder per skill with its `SKILL.md`. Common locations:
-   `~/.config/opencode/skills/` (global) or `./.opencode/skills/` (per project). No registration
-   is needed — placement is enough, and the bundled `name`/`description` frontmatter is already
-   what OpenCode expects.
+Pin a version the same way as any other OpenCode plugin: `opencode plugin add
+@jeap/jeap-dev-toolkit@1.2.3`, or `{ "package": "@jeap/jeap-dev-toolkit@1.2.3" }` in config.
 
 ## Verify
 
-Run `opencode` and use `/mcp` to confirm `jeap-mcp-service` is connected; the skills load
-automatically when their description matches your request.
+Run `opencode`, then:
 
-## Update later
+- `/mcp` → confirm `jeap-mcp-service` is connected.
+- Ask something clearly jEAP-specific (e.g. *"migrate this project to Spring Boot 4"*) and confirm
+  a bundled skill picks it up, or check your skill list for `jeap-expert`, `install-jeap-cli`,
+  `migrate-spring-boot-4`, and `migrate-confluence-docs`.
 
-Refresh your local copy of this repository, then either re-run the setup script (Option A) or
-re-copy the skills and re-merge the MCP snippet by hand (Option B) if it changed. See the
-[OpenCode skills docs](https://opencode.ai/docs/skills), [MCP docs](https://opencode.ai/docs/mcp-servers)
-and [plugins docs](https://opencode.ai/docs/plugins/) for the full list of scanned locations and
-what OpenCode plugins are actually for.
+## Update
+
+```bash
+opencode plugin update @jeap/jeap-dev-toolkit
+opencode plugin check @jeap/jeap-dev-toolkit
+```
+
+## Remove
+
+```bash
+opencode plugin remove @jeap/jeap-dev-toolkit
+```
+
+(Or delete the `plugins` entry from your `opencode.json(c)`, for a project-local install.)
+
+## Working from a local checkout instead (development only)
+
+For testing an unpublished change — not needed for normal use — point OpenCode at the checkout
+directly:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["/absolute/path/to/jeap-agent-marketplace/plugins/jeap-dev-toolkit"]
+}
+```
+
+OpenCode loads the package through its `package.json` (`name` + `exports`), so the path can
+point at either `plugins/jeap-dev-toolkit` or a symlink to it — no copying. A relative path
+resolves from that `opencode.json`'s own directory.

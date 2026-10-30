@@ -37,7 +37,7 @@ Today the marketplace contains a single plugin, [`jeap-dev-toolkit`](#the-jeap-d
   | GitHub Copilot CLI | a current GA build (GA Feb 2026, `v1.0.x`+) | run `copilot upgrade` if unsure |
   | Claude Code | `v2.1.143`+ | |
   | OpenAI Codex CLI | `v0.131.0`+ | plugin support is new (added March 2026) and still evolving |
-  | OpenCode | `v1.0.190`+ | skills support; set up manually (no marketplace) |
+  | OpenCode | `v2.0.27`+ | no marketplace; installed as an OpenCode plugin instead (v1 unsupported) |
 
 - **Per-skill tooling** (Docker, JDK 25, …) is needed only when you *run* a given skill — see the
   [plugin README](plugins/jeap-dev-toolkit/README.md#requirements) for the details.
@@ -84,8 +84,9 @@ codex plugin marketplace add jeap-admin-ch/jeap-agent-marketplace
 # local dev: codex plugin marketplace add /path/to/jeap-agent-marketplace
 ```
 
-**OpenCode** has no marketplace or plugin-install mechanism — it is set up manually instead.
-See [OpenCode (manual setup)](docs/opencode-setup.md); you can skip steps 2–6.
+**OpenCode** has no marketplace — skip this step and go straight to
+[step 3](#3-install-a-plugin), which installs `@jeap/jeap-dev-toolkit` directly from npm. See
+[OpenCode](docs/opencode-setup.md) for details.
 
 ## 2. Available plugins
 
@@ -121,6 +122,13 @@ copilot plugin install jeap-dev-toolkit@jeap
 codex plugin add jeap-dev-toolkit@jeap
 ```
 
+**OpenCode** (no marketplace step — install straight from npm; see
+[OpenCode](docs/opencode-setup.md) for details)
+
+```bash
+opencode plugin add @jeap/jeap-dev-toolkit
+```
+
 Installing the plugin auto-registers its bundled MCP server and skills — there is nothing else
 to wire up.
 
@@ -153,6 +161,15 @@ codex mcp list                      # jeap-mcp-service appears
 # in the TUI: /skills lists the bundled skills; /mcp shows server status
 ```
 
+**OpenCode**
+
+```text
+/mcp   → jeap-mcp-service is listed and connected
+```
+
+Ask a jEAP-specific question or check your skill list for `jeap-expert`, `install-jeap-cli`,
+`migrate-spring-boot-4`, and `migrate-confluence-docs`.
+
 > If `jeap-mcp-service` shows as not connected, see [Troubleshooting](#troubleshooting).
 
 ## 5. Update plugins
@@ -181,12 +198,19 @@ codex plugin marketplace upgrade jeap       # refresh just this marketplace
 codex plugin add jeap-dev-toolkit@jeap
 ```
 
+**OpenCode**
+
+```bash
+opencode plugin update @jeap/jeap-dev-toolkit
+opencode plugin check @jeap/jeap-dev-toolkit
+```
+
 ## 6. Remove a plugin or marketplace
 
-| Action | Copilot CLI | Claude Code | Codex CLI |
-| ------ | ----------- | ----------- | --------- |
-| Uninstall a plugin | `copilot plugin uninstall jeap-dev-toolkit` | `/plugin uninstall jeap-dev-toolkit@jeap` | `codex plugin remove jeap-dev-toolkit@jeap` |
-| Remove the marketplace | `copilot plugin marketplace remove jeap` | `/plugin marketplace remove jeap` | `codex plugin marketplace remove jeap` |
+| Action | Copilot CLI | Claude Code | Codex CLI | OpenCode |
+| ------ | ----------- | ----------- | --------- | -------- |
+| Uninstall a plugin | `copilot plugin uninstall jeap-dev-toolkit` | `/plugin uninstall jeap-dev-toolkit@jeap` | `codex plugin remove jeap-dev-toolkit@jeap` | `opencode plugin remove @jeap/jeap-dev-toolkit` |
+| Remove the marketplace | `copilot plugin marketplace remove jeap` | `/plugin marketplace remove jeap` | `codex plugin marketplace remove jeap` | n/a (no marketplace) |
 
 ---
 

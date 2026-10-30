@@ -1,0 +1,223 @@
+name: OpenCode plugin build and release
+
+# Builds and publishes the jeap-dev-toolkit OpenCode plugin (plugins/jeap-dev-toolkit) to the
+# public npm registry as @jeap/jeap-dev-toolkit using npm Trusted Publishing (OIDC). The one-time
+# npm/GitHub setup this depends on is maintainer-internal and not documented in this repo.
+
+on:
+  push:
+    branches:
+      - '**' # every branch; tags are excluded so the release marker tag does not re-run CI
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.16.0'
+  PLUGIN_NAME: jeap-dev-toolkit
+  PLUGIN_ROOT: plugins/jeap-dev-toolkit
+
+jobs:
+  quality:
+    name: Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.PLUGIN_ROOT }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm run typecheck
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.PLUGIN_ROOT }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm ci
+
+      - name: Verify package contents
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          test -f package.json
+          test -f README.md
+          test -f .opencode-plugin/index.ts
+          node -e "const p=require('./package.json'); if (!p.name || !p.version) throw new Error('Missing package name or version'); if (p.private === true) throw new Error('Plugin package must not be private'); if (Object.keys(p.dependencies || {}).length > 0) throw new Error('The OpenCode plugin must not have runtime dependencies'); console.log(p.name + '@' + p.version)"
+
+      - name: Create npm package tarball
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm pack
+
+      # npm refuses to dry-run a version that is already on the registry, so after a release
+      # every further push to main would fail here until the next version bump. The record tag
+      # is the same signal the release job uses to decide that.
+      - name: Publish dry run
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          set -euo pipefail
+          TAG="${PLUGIN_NAME}-v$(node -p "require('./package.json').version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "${TAG} is already released; a published version cannot be published again. Skipping the dry run."
+            exit 0
+          fi
+          npm publish --dry-run --access public
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      # Node refuses to type-strip *.ts files under node_modules (this package ships
+      # .opencode-plugin/index.ts unbuilt), and OpenCode itself runs plugins with its bundled
+      # Bun anyway — so the only runtime that can actually smoke-test an installed copy of this
+      # package is Bun. See ci/opencode-plugin-smoke-test.mjs for what this checks.
+      - name: Smoke test the packed tarball
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          set -euo pipefail
+          TARBALL="$(ls jeap-jeap-dev-toolkit-*.tgz)"
+          PEER_RANGE="$(node -p "require('./package.json').peerDependencies['@opencode/plugin']")"
+          SMOKE="$(mktemp -d)"
+          cp "${TARBALL}" ci/opencode-plugin-smoke-test.mjs "${SMOKE}/"
+          cd "${SMOKE}"
+          npm init -y >/dev/null
+          npm pkg set type=module >/dev/null
+          npm install --no-audit --no-fund "@opencode/plugin@${PEER_RANGE}" "./${TARBALL}"
+          bun run opencode-plugin-smoke-test.mjs
+
+      - name: Upload package tarball artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: jeap-dev-toolkit-opencode-plugin
+          path: ${{ env.PLUGIN_ROOT }}/*.tgz
+          if-no-files-found: error
+
+  release:
+    name: Release to npm
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+      - package
+    # Only on main (push or manual dispatch), after all checks pass. The "already released"
+    # guard below makes a no-version-bump merge a no-op.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+
+    # The release runs in the protected "release" environment, which scopes the bootstrap
+    # NPM_TOKEN secret to this job. The npm trusted publisher must be configured for this
+    # workflow file (opencode-plugin-release.yml) and the same environment.
+    environment: release
+
+    permissions:
+      contents: write # push the release tag with the default GITHUB_TOKEN
+      id-token: write # OIDC token for npm trusted publishing
+
+    # While the one-time bootstrap secret NPM_TOKEN exists, the token publish step runs. Once
+    # the npm trusted publisher is configured and the secret is deleted, the OIDC publish step
+    # takes over automatically (no workflow edit).
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determine release tag
+        id: version
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "tag=${PLUGIN_NAME}-v${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Skip if this version is already released
+        id: guard
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null \
+            || git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists; ${TAG} is already released. Skipping."
+            echo "release=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Releasing ${TAG}."
+            echo "release=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Setup Node.js for npm registry
+        if: steps.guard.outputs.release == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.PLUGIN_ROOT }}/package-lock.json
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm for trusted publishing
+        if: steps.guard.outputs.release == 'true'
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        if: steps.guard.outputs.release == 'true'
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm ci
+
+      - name: Verify package contents
+        if: steps.guard.outputs.release == 'true'
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          test -f package.json
+          test -f README.md
+          node -e "const p=require('./package.json'); if (!p.name || !p.version) throw new Error('Missing package name or version'); if (p.private === true) throw new Error('Plugin package must not be private'); if (Object.keys(p.dependencies || {}).length > 0) throw new Error('The OpenCode plugin must not have runtime dependencies'); console.log(p.name + '@' + p.version)"
+
+      - name: Publish to npm (token bootstrap)
+        if: steps.guard.outputs.release == 'true' && env.HAS_NPM_TOKEN == 'true'
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm (trusted publishing / OIDC)
+        if: steps.guard.outputs.release == 'true' && env.HAS_NPM_TOKEN != 'true'
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: npm publish --access public
+
+      # Record the published version with a tag (default GITHUB_TOKEN is enough; the tag is a
+      # marker and idempotency guard, not a release trigger).
+      - name: Tag the published version
+        if: steps.guard.outputs.release == 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+          echo "Published and tagged ${TAG}."
