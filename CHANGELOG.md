@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-11-04
+
+### Security
+
+- `plain-fixture` (eval fixture): override the versions of transitive dependencies that Spring Boot 4.1.2 (the latest
+  release) still resolves with known vulnerabilities: `tools.jackson.core:jackson-databind` 3.1.8 (was 3.1.7,
+  CVE-2026-110879) and the `kafka-clients` compression libraries `zstd-jni` 1.5.7-24 (was 1.5.6-10), `lz4-java` 1.12.1
+  (was 1.11.2) and `snappy-java` 1.1.10.12 (was 1.1.10.7), aligned with `jeap-spring-boot-parent` 41.29.1.
+
 ## [0.11.0] - 2026-10-29
 
 ### Security
