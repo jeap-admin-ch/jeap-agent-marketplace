@@ -71,8 +71,8 @@ mkdir -p .jeap-migration
 # Claude Code — the plugin root is exported for you:
 cp "$CLAUDE_PLUGIN_ROOT/skills/migrate-spring-boot-4/scripts/jeap-run.sh" .jeap-migration/
 # Other agents — copy scripts/jeap-run.sh from this skill's own directory (the folder that holds
-# this SKILL.md): Copilot and Codex surface that path to you; under OpenCode it is the
-# skills/migrate-spring-boot-4/ folder you copied in.
+# this loaded SKILL.md): Copilot and Codex surface that path to you; OpenCode states it as this
+# skill's "Base directory" when it presents the skill.
 chmod +x .jeap-migration/jeap-run.sh
 ```
 
@@ -255,7 +255,7 @@ This migration issues many commands over a long session — builds, greps, file 
    **b. Write the report file.** Read the template bundled with this skill and write the filled-in result to `spring-boot-4-migration.md` at the **project root** — **not** under `.jeap-migration/` (scratch, gets deleted) and **not** only to the chat. Use the template so the summary has the same shape in every project:
 
    - **Claude Code** — read `$CLAUDE_PLUGIN_ROOT/skills/migrate-spring-boot-4/assets/spring-boot-4-migration.template.md`.
-   - **Other agents** — read `assets/spring-boot-4-migration.template.md` from this skill's own directory (the folder that holds this SKILL.md): Copilot and Codex surface that path to you; under OpenCode it is the `skills/migrate-spring-boot-4/` folder you copied in.
+   - **Other agents** — read `assets/spring-boot-4-migration.template.md` from this skill's own directory (the folder that holds this loaded SKILL.md): Copilot and Codex surface that path to you; OpenCode states it as this skill's "Base directory" when it presents the skill.
 
    Fill in every section and replace every `<placeholder>`, delete the guidance comments, and keep the section order fixed. The template captures: an overview of versions and the final build; the dependency changes (version bumps and any dependencies you added by hand); a pointer to the recipe-applied automated changes; the agentic fixes you made, each with a one-line *why*; a review checklist; and the verification evidence. Use prose only where a change's *why* needs more than a table cell.
 

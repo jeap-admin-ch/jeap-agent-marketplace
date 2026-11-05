@@ -12,6 +12,7 @@
 // https://github.com/anomalyco/opencode/blob/dev/packages/plugins/figma/index.ts
 
 import { Plugin, Skill } from "@opencode/plugin"
+import type { Dirent } from "node:fs"
 import { readdir, readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
@@ -52,13 +53,27 @@ function parseScalar(raw: string): string | boolean {
   if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
     return trimmed.slice(1, -1)
   }
-  if (trimmed === "true") return true
-  if (trimmed === "false") return false
+  // Case-insensitive on purpose: unlike every other value here, this one is compared against a
+  // boolean literal (autoinvoke below), not just passed through as a string, so "True"/"FALSE"
+  // must not silently fall through as truthy strings.
+  const lower = trimmed.toLowerCase()
+  if (lower === "true") return true
+  if (lower === "false") return false
   return trimmed
 }
 
 async function loadSkills() {
-  const entries = await readdir(SKILLS_DIR, { withFileTypes: true })
+  let entries: Dirent[]
+  try {
+    entries = await readdir(SKILLS_DIR, { withFileTypes: true })
+  } catch (error) {
+    // Degrade to "no skills" rather than throwing out of setup() after ctx.mcp.transform has
+    // already run — a missing/unreadable skills/ dir shouldn't take the MCP registration down
+    // with it. Still surfaced loudly so a real packaging bug isn't mistaken for zero skills.
+    console.error(`jeap-dev-toolkit: could not read skills directory ${SKILLS_DIR}: ${error}`)
+    return []
+  }
+
   const skills = await Promise.all(
     entries
       .filter((entry) => entry.isDirectory())
@@ -67,8 +82,14 @@ async function loadSkills() {
         let raw: string
         try {
           raw = await readFile(file, "utf8")
-        } catch {
-          return undefined // not a skill folder (no SKILL.md)
+        } catch (error) {
+          // A missing SKILL.md (ENOENT) just means this folder isn't a skill — expected, silent.
+          // Anything else (EACCES, EISDIR, ...) is a real problem masquerading as one; still skip
+          // the folder rather than failing the whole plugin, but say so instead of hiding it.
+          if ((error as NodeJS.ErrnoException)?.code !== "ENOENT") {
+            console.error(`jeap-dev-toolkit: could not read ${file}: ${error}`)
+          }
+          return undefined
         }
         const { data, content } = parseFrontmatter(raw)
         const name = typeof data.name === "string" ? data.name : entry.name

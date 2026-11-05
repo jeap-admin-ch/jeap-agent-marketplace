@@ -10,7 +10,7 @@ to merge by hand and no skill folders to copy — OpenCode reconciles both on ev
 `jeap-mcp-service` entry you set yourself is left alone.
 
 It is published to the public npm registry as
-[`@jeap/jeap-dev-toolkit`](https://www.npmjs.com/package/@jeap/jeap-dev-toolkit).
+[`@jeap/jeap-opencode-plugin`](https://www.npmjs.com/package/@jeap/jeap-opencode-plugin).
 
 Requires **OpenCode v2.0.27+** (first release with `ctx.mcp.transform` / `ctx.skill.transform`).
 OpenCode v1 is unsupported.
@@ -29,7 +29,7 @@ curl -fsSL https://opencode.ai/v2/install | bash
 **Global (recommended):**
 
 ```bash
-opencode plugin add @jeap/jeap-dev-toolkit
+opencode plugin add @jeap/jeap-opencode-plugin
 ```
 
 **Project-local** — add it to the project's `opencode.json(c)`:
@@ -37,12 +37,12 @@ opencode plugin add @jeap/jeap-dev-toolkit
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["@jeap/jeap-dev-toolkit"]
+  "plugins": ["@jeap/jeap-opencode-plugin"]
 }
 ```
 
 Pin a version the same way as any other OpenCode plugin: `opencode plugin add
-@jeap/jeap-dev-toolkit@1.2.3`, or `{ "package": "@jeap/jeap-dev-toolkit@1.2.3" }` in config.
+@jeap/jeap-opencode-plugin@1.2.3`, or `{ "package": "@jeap/jeap-opencode-plugin@1.2.3" }` in config.
 
 ## Verify
 
@@ -56,14 +56,14 @@ Run `opencode`, then:
 ## Update
 
 ```bash
-opencode plugin update @jeap/jeap-dev-toolkit
-opencode plugin check @jeap/jeap-dev-toolkit
+opencode plugin update @jeap/jeap-opencode-plugin
+opencode plugin check @jeap/jeap-opencode-plugin
 ```
 
 ## Remove
 
 ```bash
-opencode plugin remove @jeap/jeap-dev-toolkit
+opencode plugin remove @jeap/jeap-opencode-plugin
 ```
 
 (Or delete the `plugins` entry from your `opencode.json(c)`, for a project-local install.)

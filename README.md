@@ -85,7 +85,7 @@ codex plugin marketplace add jeap-admin-ch/jeap-agent-marketplace
 ```
 
 **OpenCode** has no marketplace — skip this step and go straight to
-[step 3](#3-install-a-plugin), which installs `@jeap/jeap-dev-toolkit` directly from npm. See
+[step 3](#3-install-a-plugin), which installs `@jeap/jeap-opencode-plugin` directly from npm. See
 [OpenCode](docs/opencode-setup.md) for details.
 
 ## 2. Available plugins
@@ -126,7 +126,7 @@ codex plugin add jeap-dev-toolkit@jeap
 [OpenCode](docs/opencode-setup.md) for details)
 
 ```bash
-opencode plugin add @jeap/jeap-dev-toolkit
+opencode plugin add @jeap/jeap-opencode-plugin
 ```
 
 Installing the plugin auto-registers its bundled MCP server and skills — there is nothing else
@@ -201,15 +201,15 @@ codex plugin add jeap-dev-toolkit@jeap
 **OpenCode**
 
 ```bash
-opencode plugin update @jeap/jeap-dev-toolkit
-opencode plugin check @jeap/jeap-dev-toolkit
+opencode plugin update @jeap/jeap-opencode-plugin
+opencode plugin check @jeap/jeap-opencode-plugin
 ```
 
 ## 6. Remove a plugin or marketplace
 
 | Action | Copilot CLI | Claude Code | Codex CLI | OpenCode |
 | ------ | ----------- | ----------- | --------- | -------- |
-| Uninstall a plugin | `copilot plugin uninstall jeap-dev-toolkit` | `/plugin uninstall jeap-dev-toolkit@jeap` | `codex plugin remove jeap-dev-toolkit@jeap` | `opencode plugin remove @jeap/jeap-dev-toolkit` |
+| Uninstall a plugin | `copilot plugin uninstall jeap-dev-toolkit` | `/plugin uninstall jeap-dev-toolkit@jeap` | `codex plugin remove jeap-dev-toolkit@jeap` | `opencode plugin remove @jeap/jeap-opencode-plugin` |
 | Remove the marketplace | `copilot plugin marketplace remove jeap` | `/plugin marketplace remove jeap` | `codex plugin marketplace remove jeap` | n/a (no marketplace) |
 
 ---

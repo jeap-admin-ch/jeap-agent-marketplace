@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@jeap/jeap-dev-toolkit",
+  "name": "@jeap/jeap-opencode-plugin",
   "version": "0.10.0",
   "description": "jEAP developer toolkit as an OpenCode plugin: registers the jeap-mcp-service MCP server and the jeap-dev-toolkit skills (install-jeap-cli, jeap-expert, migrate-confluence-docs, migrate-spring-boot-4) directly in OpenCode's runtime catalog.",
   "keywords": [
@@ -34,6 +34,7 @@
   "files": [
     ".opencode-plugin",
     "skills",
+    "!skills/*/tests",
     "README.md"
   ],
   "scripts": {

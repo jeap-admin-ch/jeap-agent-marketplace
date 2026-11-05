@@ -1,17 +1,20 @@
 name: OpenCode plugin build and release
 
 # Builds and publishes the jeap-dev-toolkit OpenCode plugin (plugins/jeap-dev-toolkit) to the
-# public npm registry as @jeap/jeap-dev-toolkit using npm Trusted Publishing (OIDC). The one-time
-# npm/GitHub setup this depends on is maintainer-internal and not documented in this repo.
+# public npm registry as @jeap/jeap-opencode-plugin using npm Trusted Publishing (OIDC). The
+# one-time npm/GitHub setup this depends on is maintainer-internal and not documented in this repo.
 
 on:
   push:
     branches:
       - '**' # every branch; tags are excluded so the release marker tag does not re-run CI
+    paths:
+      - 'plugins/jeap-dev-toolkit/**'
+      - '.github/workflows/opencode-plugin-release.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read # quality/package/smoke-test only read; the release job declares its own write scopes
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,7 +22,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24.16.0'
-  PLUGIN_NAME: jeap-dev-toolkit
+  PLUGIN_NAME: jeap-opencode-plugin
   PLUGIN_ROOT: plugins/jeap-dev-toolkit
 
 jobs:
@@ -73,28 +76,69 @@ jobs:
           test -f package.json
           test -f README.md
           test -f .opencode-plugin/index.ts
-          node -e "const p=require('./package.json'); if (!p.name || !p.version) throw new Error('Missing package name or version'); if (p.private === true) throw new Error('Plugin package must not be private'); if (Object.keys(p.dependencies || {}).length > 0) throw new Error('The OpenCode plugin must not have runtime dependencies'); console.log(p.name + '@' + p.version)"
+          node ci/verify-package-contents.mjs package.json
 
       - name: Create npm package tarball
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: npm pack
 
       # npm refuses to dry-run a version that is already on the registry, so after a release
-      # every further push to main would fail here until the next version bump. The record tag
-      # is the same signal the release job uses to decide that.
+      # every further push to main would fail here until the next version bump. Check the
+      # registry itself, not just the record tag: a cancelled release run can publish successfully
+      # but never reach its tag-push step (see the release job's guard for the same reasoning), in
+      # which case the tag alone would wrongly say "not released yet" here too.
       - name: Publish dry run
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: |
           set -euo pipefail
-          TAG="${PLUGIN_NAME}-v$(node -p "require('./package.json').version")"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "${TAG} is already released; a published version cannot be published again. Skipping the dry run."
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="${PLUGIN_NAME}-v${VERSION}"
+          ENCODED_NAME="$(node -p "encodeURIComponent('${NAME}')")"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1 \
+            || curl -sf -o /dev/null "https://registry.npmjs.org/${ENCODED_NAME}/${VERSION}"; then
+            echo "${NAME}@${VERSION} is already released; a published version cannot be published again. Skipping the dry run."
             exit 0
           fi
           npm publish --dry-run --access public
 
+      - name: Upload package tarball artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: jeap-opencode-plugin
+          path: ${{ env.PLUGIN_ROOT }}/*.tgz
+          if-no-files-found: error
+
+  smoke-test:
+    name: Smoke test (@opencode/plugin ${{ matrix.resolution }})
+    runs-on: ubuntu-latest
+    needs:
+      - package
+
+    # Two resolutions of the same peerDependencies range (plugins/jeap-dev-toolkit/package.json):
+    # "latest" floats to the newest 2.x (what quality/package already exercise via `npm ci`),
+    # "floor" pins the exact version documented as the minimum (docs/opencode-setup.md) — the one
+    # a user who hasn't upgraded OpenCode in a while actually has. A regression at the floor that
+    # the floating resolution can't see (because npm always picks the newest match) fails here
+    # instead of surfacing as a silent load failure for them. See the review discussion this
+    # responds to: CI previously only ever installed the newest 2.x.
+    strategy:
+      fail-fast: false
+      matrix:
+        resolution: [floor, latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      - name: Download package tarball artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: jeap-opencode-plugin
+          path: ${{ env.PLUGIN_ROOT }}
 
       # Node refuses to type-strip *.ts files under node_modules (this package ships
       # .opencode-plugin/index.ts unbuilt), and OpenCode itself runs plugins with its bundled
@@ -104,22 +148,31 @@ jobs:
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: |
           set -euo pipefail
-          TARBALL="$(ls jeap-jeap-dev-toolkit-*.tgz)"
+          TARBALL="$(ls jeap-jeap-opencode-plugin-*.tgz)"
           PEER_RANGE="$(node -p "require('./package.json').peerDependencies['@opencode/plugin']")"
+          if [ "${{ matrix.resolution }}" = "floor" ]; then
+            # Strip the leading ^/~ so npm installs exactly the range's minimum, not its newest match.
+            PLUGIN_SPEC="$(node -p "'${PEER_RANGE}'.replace(/^[^0-9]*/, '')")"
+          else
+            PLUGIN_SPEC="${PEER_RANGE}"
+          fi
+          echo "Resolving @opencode/plugin@${PLUGIN_SPEC} (${{ matrix.resolution }} of peerDependencies range ${PEER_RANGE})"
           SMOKE="$(mktemp -d)"
           cp "${TARBALL}" ci/opencode-plugin-smoke-test.mjs "${SMOKE}/"
           cd "${SMOKE}"
           npm init -y >/dev/null
           npm pkg set type=module >/dev/null
-          npm install --no-audit --no-fund "@opencode/plugin@${PEER_RANGE}" "./${TARBALL}"
+          npm install --no-audit --no-fund "@opencode/plugin@${PLUGIN_SPEC}" "./${TARBALL}"
+          # Read package.json straight off disk rather than `require("@opencode/plugin/package.json")`
+          # — that package's own "exports" map doesn't expose that subpath, so module resolution
+          # throws ERR_PACKAGE_PATH_NOT_EXPORTED.
+          INSTALLED="$(node -p "JSON.parse(require('node:fs').readFileSync('node_modules/@opencode/plugin/package.json', 'utf8')).version")"
+          if [ "${{ matrix.resolution }}" = "floor" ] && [ "${INSTALLED}" != "${PLUGIN_SPEC}" ]; then
+            echo "Expected the floor resolution to install exactly ${PLUGIN_SPEC}, got ${INSTALLED}" >&2
+            exit 1
+          fi
+          echo "Installed @opencode/plugin@${INSTALLED}"
           bun run opencode-plugin-smoke-test.mjs
-
-      - name: Upload package tarball artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: jeap-dev-toolkit-opencode-plugin
-          path: ${{ env.PLUGIN_ROOT }}/*.tgz
-          if-no-files-found: error
 
   release:
     name: Release to npm
@@ -127,6 +180,7 @@ jobs:
     needs:
       - quality
       - package
+      - smoke-test
     # Only on main (push or manual dispatch), after all checks pass. The "already released"
     # guard below makes a no-version-bump merge a no-op.
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
@@ -152,72 +206,117 @@ jobs:
         with:
           fetch-depth: 0
 
+      # This is the exact tarball the package job built and the smoke-test job already verified
+      # under both the floor and latest @opencode/plugin resolutions — published as-is, not
+      # re-packed. This job never runs `npm ci`/`npm install` against the project's own
+      # devDependencies (~270 transitive packages, several with install scripts): it has
+      # id-token: write for OIDC trusted publishing, so letting any of those run here — or
+      # letting a floating `npm install -g npm@latest` pull an arbitrary npm release — would mean
+      # a compromised dependency or npm release could use that token to publish under our name.
+      - name: Download package tarball artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: jeap-opencode-plugin
+          path: ${{ env.PLUGIN_ROOT }}
+
+      - name: Extract package.json from the tarball
+        id: pkg
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          set -euo pipefail
+          TARBALL="$(ls jeap-jeap-opencode-plugin-*.tgz)"
+          mkdir -p release-extract
+          tar -xzf "${TARBALL}" -C release-extract
+          echo "tarball=${TARBALL}" >> "${GITHUB_OUTPUT}"
+
       - name: Determine release tag
         id: version
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./release-extract/package/package.json').name")
+          VERSION=$(node -p "require('./release-extract/package/package.json').version")
+          echo "name=${NAME}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${PLUGIN_NAME}-v${VERSION}" >> "${GITHUB_OUTPUT}"
 
+      # The record tag is pushed only *after* `npm publish` succeeds (next steps), but this job's
+      # workflow-level `concurrency: cancel-in-progress` (line 18) can cancel a run after a
+      # successful publish but before that tag push — the next run would then see no tag, retry
+      # `npm publish` for a version already on the registry, and fail every time until someone
+      # intervenes by hand. So the npm registry itself, not just the tag, decides "already
+      # released": `needs_tag=true` lets a run in that exact state push the missing tag without
+      # re-publishing.
       - name: Skip if this version is already released
         id: guard
         run: |
+          set -euo pipefail
           TAG="${{ steps.version.outputs.tag }}"
+          NAME="${{ steps.version.outputs.name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          ENCODED_NAME="$(node -p "encodeURIComponent('${NAME}')")"
+
           if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null \
             || git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
             echo "Tag ${TAG} already exists; ${TAG} is already released. Skipping."
             echo "release=false" >> "${GITHUB_OUTPUT}"
+            echo "needs_tag=false" >> "${GITHUB_OUTPUT}"
+          elif curl -sf -o /dev/null "https://registry.npmjs.org/${ENCODED_NAME}/${VERSION}"; then
+            echo "${NAME}@${VERSION} is already on the npm registry but ${TAG} was never pushed" \
+              "(likely a cancelled prior run). Skipping the publish, recording the tag only."
+            echo "release=false" >> "${GITHUB_OUTPUT}"
+            echo "needs_tag=true" >> "${GITHUB_OUTPUT}"
           else
             echo "Releasing ${TAG}."
             echo "release=true" >> "${GITHUB_OUTPUT}"
+            echo "needs_tag=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      # No `cache: npm`: there is no lockfile install in this job, so there is nothing to cache —
+      # restoring one here would mean trusting its contents going into the OIDC-token-bearing
+      # publish step for no benefit.
       - name: Setup Node.js for npm registry
         if: steps.guard.outputs.release == 'true'
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ env.PLUGIN_ROOT }}/package-lock.json
           registry-url: https://registry.npmjs.org
 
-      - name: Upgrade npm for trusted publishing
+      # Pinned to an exact release (trusted publishing needs npm >= 11.5.1), not `@latest`: this
+      # command runs with the job's OIDC token available, so floating to whatever npm publishes
+      # next would mean a compromised npm release could use that token too. Bump deliberately.
+      - name: Install npm 12.2.2 for trusted publishing
         if: steps.guard.outputs.release == 'true'
-        run: npm install -g npm@latest
-
-      - name: Install dependencies
-        if: steps.guard.outputs.release == 'true'
-        working-directory: ${{ env.PLUGIN_ROOT }}
-        run: npm ci
+        run: npm install -g npm@12.2.2
 
       - name: Verify package contents
         if: steps.guard.outputs.release == 'true'
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: |
-          test -f package.json
-          test -f README.md
-          node -e "const p=require('./package.json'); if (!p.name || !p.version) throw new Error('Missing package name or version'); if (p.private === true) throw new Error('Plugin package must not be private'); if (Object.keys(p.dependencies || {}).length > 0) throw new Error('The OpenCode plugin must not have runtime dependencies'); console.log(p.name + '@' + p.version)"
+          test -f release-extract/package/package.json
+          test -f release-extract/package/README.md
+          node ci/verify-package-contents.mjs release-extract/package/package.json
 
       - name: Publish to npm (token bootstrap)
         if: steps.guard.outputs.release == 'true' && env.HAS_NPM_TOKEN == 'true'
         working-directory: ${{ env.PLUGIN_ROOT }}
-        run: npm publish --access public --provenance
+        run: npm publish "${{ steps.pkg.outputs.tarball }}" --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm (trusted publishing / OIDC)
         if: steps.guard.outputs.release == 'true' && env.HAS_NPM_TOKEN != 'true'
         working-directory: ${{ env.PLUGIN_ROOT }}
-        run: npm publish --access public
+        run: npm publish "${{ steps.pkg.outputs.tarball }}" --access public
 
       # Record the published version with a tag (default GITHUB_TOKEN is enough; the tag is a
-      # marker and idempotency guard, not a release trigger).
+      # marker and idempotency guard, not a release trigger). Also runs for needs_tag=true, the
+      # "npm has it, tag is missing" recovery case the guard step above detects.
       - name: Tag the published version
-        if: steps.guard.outputs.release == 'true'
+        if: steps.guard.outputs.release == 'true' || steps.guard.outputs.needs_tag == 'true'
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "${TAG}"
-          echo "Published and tagged ${TAG}."
+          echo "Tagged ${TAG}."

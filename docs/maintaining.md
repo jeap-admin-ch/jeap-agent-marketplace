@@ -13,7 +13,7 @@ jeap-agent-marketplace/
 │   └── maintaining.md                     # this file
 ├── .github/
 │   └── workflows/
-│       └── opencode-plugin-release.yml    # builds + publishes @jeap/jeap-dev-toolkit on merge to main
+│       └── opencode-plugin-release.yml    # builds + publishes @jeap/jeap-opencode-plugin on merge to main
 ├── evals/
 │   └── jeap-expert/                       # trigger evals for the jeap-expert skill (see its README)
 ├── .claude-plugin/
@@ -51,7 +51,7 @@ manifests under `.agents/` and `.codex-plugin/`. OpenCode has no marketplace, bu
 `setup(ctx)` calls `ctx.mcp.transform` to register `jeap-mcp-service` and `ctx.skill.transform` to
 register each skill from `skills/*/SKILL.md`, both reconciled on every OpenCode launch — no config
 merge or file copy needed. It is published to the public npm registry as
-[`@jeap/jeap-dev-toolkit`](https://www.npmjs.com/package/@jeap/jeap-dev-toolkit) via
+[`@jeap/jeap-opencode-plugin`](https://www.npmjs.com/package/@jeap/jeap-opencode-plugin) via
 [`.github/workflows/opencode-plugin-release.yml`](../.github/workflows/opencode-plugin-release.yml)
 using npm Trusted Publishing (OIDC) — see [`docs/opencode-setup.md`](opencode-setup.md) for the
 install instructions. Requires OpenCode **v2.0.27+**
@@ -93,10 +93,17 @@ hyphen-separated, and **match the skill's folder name** (regex `^[a-z0-9]+(-[a-z
 is bundled as a real file under the skill's `scripts/` directory rather than embedded in `SKILL.md`
 as a code block the model retypes — so it can be reviewed, linted, and tested, and so a
 security-relevant guardrail can't be silently dropped during reconstruction. There is no portable
-placeholder for the skill's install path across all four agents (only Claude Code exports
-`${CLAUDE_PLUGIN_ROOT}`; Codex's `PLUGIN_ROOT` is hooks-only; Copilot and OpenCode have none), so
-`SKILL.md` instructs the agent to **copy the bundled script into the project's working directory
-and run it from there** rather than executing it in place. That keeps the run command identical
+*environment-variable* placeholder for the skill's install path across all four agents (only
+Claude Code exports `${CLAUDE_PLUGIN_ROOT}`; Codex's `PLUGIN_ROOT` is hooks-only; Copilot has
+none) — OpenCode is the exception: `ctx.skill.transform` registers each skill with a real
+filesystem `path` (`.opencode-plugin/index.ts`), so OpenCode's own skill-invocation logic states
+that directory as prose in the model's context ("Base directory for this skill: …", with a sampled
+listing of everything under it, subfolders included) whenever the skill is presented — `SKILL.md`
+can rely on that directly (see `migrate-confluence-docs`'s "beside this loaded SKILL.md" phrasing,
+which this relies on). Either way, `SKILL.md` instructs the agent to **copy the bundled script
+into the project's working directory and run it from there** rather than executing it in place
+— OpenCode's resolved base directory is wherever npm installed the package, not a writable
+scratch location, so copying out is still required there too. That keeps the run command identical
 across agents, keeps the script's scratch files in a writable location, and means no agent ever
 has to execute a file out of its (possibly read-only) plugin cache. Invoke bundled scripts with an
 explicit interpreter (`sh script.sh`), since the executable bit is not guaranteed to survive
@@ -172,7 +179,7 @@ The result must contain `migrate-confluence-docs` with `source: plugin`, the int
    (`jeap-admin-ch/jeap-agent-marketplace`); merging the version bump to `main` both makes the
    new version available to Copilot/Claude/Codex consumers and, via
    [`.github/workflows/opencode-plugin-release.yml`](../.github/workflows/opencode-plugin-release.yml),
-   **publishes** `@jeap/jeap-dev-toolkit` to npm. A merge that does not bump
+   **publishes** `@jeap/jeap-opencode-plugin` to npm. A merge that does not bump
    `plugins/jeap-dev-toolkit/package.json`'s version is a no-op for npm (the release job sees the
    tag already exists and skips).
 
@@ -183,7 +190,7 @@ Consumers then update with:
 | GitHub Copilot CLI | `copilot plugin update <plugin-name>` (or `copilot plugin update --all`) |
 | Claude Code | `/plugin marketplace update jeap`, then apply updates from the `/plugin` UI |
 | OpenAI Codex CLI | `codex plugin marketplace upgrade jeap` (re-run `codex plugin add <plugin-name>@jeap` if the version doesn't refresh) |
-| OpenCode | `opencode plugin update @jeap/jeap-dev-toolkit` |
+| OpenCode | `opencode plugin update @jeap/jeap-opencode-plugin` |
 
 ## License
 

@@ -8,6 +8,3 @@ __pycache__/
 # Node (OpenCode plugin packaging)
 node_modules/
 
-# Internal maintainer-only setup notes — not for the public repo
-docs/opencode-npm-publishing-setup.md
-

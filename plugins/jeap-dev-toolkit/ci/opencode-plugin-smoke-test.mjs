@@ -1,4 +1,4 @@
-// CI-only smoke test for the packed @jeap/jeap-dev-toolkit tarball — not published (this file
+// CI-only smoke test for the packed @jeap/jeap-opencode-plugin tarball — not published (this file
 // lives outside package.json's "files" allowlist). Run with Bun (not Node): the package ships
 // .opencode-plugin/index.ts unbuilt, and Node refuses to type-strip *.ts files that live under
 // node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING) — which is exactly how a real
@@ -8,10 +8,10 @@
 // instead of a repo checkout with relative paths.
 //
 // Usage (see .github/workflows/opencode-plugin-release.yml "Smoke test the packed tarball"):
-//   npm install --no-audit --no-fund ./jeap-jeap-dev-toolkit-*.tgz @opencode/plugin@<range>
+//   npm install --no-audit --no-fund ./jeap-jeap-opencode-plugin-*.tgz @opencode/plugin@<range>
 //   bun run opencode-plugin-smoke-test.mjs
 
-import plugin from "@jeap/jeap-dev-toolkit"
+import plugin from "@jeap/jeap-opencode-plugin"
 
 const EXPECTED_SKILLS = ["install-jeap-cli", "jeap-expert", "migrate-confluence-docs", "migrate-spring-boot-4"]
 
