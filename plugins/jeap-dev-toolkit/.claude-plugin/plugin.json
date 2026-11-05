@@ -1,7 +1,7 @@
 {
   "name": "jeap-dev-toolkit",
   "description": "jEAP (Java Enterprise Application Platform) developer toolkit for coding agents. Bundles the jEAP MCP server and skills to answer jEAP questions from indexed documentation and source, install the jEAP CLI, upgrade jEAP projects to Spring Boot 4, and migrate selected Confluence architecture documentation to Markdown.",
-  "version": "0.10.0",
+  "version": "0.12.0",
   "author": {
     "name": "jEAP team",
     "email": "jeap-community@bit.admin.ch"

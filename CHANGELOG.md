@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-11-05
+
+### Added
+
+- jeap-dev-toolkit: a real OpenCode plugin (`plugins/jeap-dev-toolkit/.opencode-plugin/index.ts`),
+  published to the public npm registry as `@jeap/jeap-opencode-plugin`. It registers the
+  `jeap-mcp-service` MCP server and all bundled skills directly in OpenCode's runtime catalog via
+  `ctx.mcp.transform`/`ctx.skill.transform` — no manual config merge or skill-folder copying.
+  Install with `opencode plugin add @jeap/jeap-opencode-plugin`. Requires OpenCode v2.0.27+;
+  OpenCode v1 is not supported.
+- `.github/workflows/opencode-plugin-release.yml`: builds, smoke-tests (against both the oldest
+  supported and newest `@opencode/plugin` version), and publishes the OpenCode plugin via npm
+  Trusted Publishing (OIDC) on merge to `main`.
+
 ## [0.11.1] - 2026-11-04
 
 ### Security

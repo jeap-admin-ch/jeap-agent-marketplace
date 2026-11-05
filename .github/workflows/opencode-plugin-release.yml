@@ -59,28 +59,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # No `npm ci` and no `cache: npm`: npm pack/publish --dry-run and ci/verify-tarball.mjs
+      # below use none of the devDependencies (no prepack/prepare script either) — only node:fs,
+      # child_process, and the filesystem. This is the tarball `release` later publishes with
+      # provenance; keeping this job's steps limited to exactly what they use means none of the
+      # ~270 transitive packages run anywhere near it before upload — none currently declare an
+      # install script (no `hasInstallScript` entries in package-lock.json) but this keeps that
+      # true independent of what a future dependency bump might add.
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: ${{ env.PLUGIN_ROOT }}/package-lock.json
-
-      - name: Install dependencies
-        working-directory: ${{ env.PLUGIN_ROOT }}
-        run: npm ci
-
-      - name: Verify package contents
-        working-directory: ${{ env.PLUGIN_ROOT }}
-        run: |
-          test -f package.json
-          test -f README.md
-          test -f .opencode-plugin/index.ts
-          node ci/verify-package-contents.mjs package.json
 
       - name: Create npm package tarball
         working-directory: ${{ env.PLUGIN_ROOT }}
         run: npm pack
+
+      - name: Verify package contents
+        working-directory: ${{ env.PLUGIN_ROOT }}
+        run: |
+          set -euo pipefail
+          TARBALL="$(ls jeap-jeap-opencode-plugin-*.tgz)"
+          node ci/verify-tarball.mjs "${TARBALL}"
 
       # npm refuses to dry-run a version that is already on the registry, so after a release
       # every further push to main would fail here until the next version bump. Check the
@@ -209,9 +209,9 @@ jobs:
       # This is the exact tarball the package job built and the smoke-test job already verified
       # under both the floor and latest @opencode/plugin resolutions — published as-is, not
       # re-packed. This job never runs `npm ci`/`npm install` against the project's own
-      # devDependencies (~270 transitive packages, several with install scripts): it has
-      # id-token: write for OIDC trusted publishing, so letting any of those run here — or
-      # letting a floating `npm install -g npm@latest` pull an arbitrary npm release — would mean
+      # devDependencies (~270 transitive packages): it has id-token: write for OIDC trusted
+      # publishing, so letting any of those — or a future one with an install script — run here,
+      # or letting a floating `npm install -g npm@latest` pull an arbitrary npm release, would mean
       # a compromised dependency or npm release could use that token to publish under our name.
       - name: Download package tarball artifact
         uses: actions/download-artifact@v7
@@ -239,9 +239,9 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${PLUGIN_NAME}-v${VERSION}" >> "${GITHUB_OUTPUT}"
 
-      # The record tag is pushed only *after* `npm publish` succeeds (next steps), but this job's
-      # workflow-level `concurrency: cancel-in-progress` (line 18) can cancel a run after a
-      # successful publish but before that tag push — the next run would then see no tag, retry
+      # The record tag is pushed only *after* `npm publish` succeeds (next steps), but this
+      # workflow's top-level `concurrency` block (`cancel-in-progress: true`) can cancel a run
+      # after a successful publish but before that tag push — the next run would then see no tag, retry
       # `npm publish` for a version already on the registry, and fail every time until someone
       # intervenes by hand. So the npm registry itself, not just the tag, decides "already
       # released": `needs_tag=true` lets a run in that exact state push the missing tag without
@@ -291,10 +291,7 @@ jobs:
       - name: Verify package contents
         if: steps.guard.outputs.release == 'true'
         working-directory: ${{ env.PLUGIN_ROOT }}
-        run: |
-          test -f release-extract/package/package.json
-          test -f release-extract/package/README.md
-          node ci/verify-package-contents.mjs release-extract/package/package.json
+        run: node ci/verify-tarball.mjs "${{ steps.pkg.outputs.tarball }}"
 
       - name: Publish to npm (token bootstrap)
         if: steps.guard.outputs.release == 'true' && env.HAS_NPM_TOKEN == 'true'
